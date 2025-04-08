@@ -1,5 +1,15 @@
 import xml.etree.ElementTree as ET
+def preprocess_text(raw_text):
+    # Unescape HTML entities
+    text = html.unescape(raw_text)
 
+    # Split into lines and keep only non-empty ones (after stripping whitespace)
+    lines = text.splitlines()
+    non_blank_lines = [line.strip() for line in lines if line.strip() != '']
+
+    # Join back with newline
+    return '\n'.join(non_blank_lines)
+    
 def extract_urls(xml_path):
     tree = ET.parse(xml_path)
     root = tree.getroot()
