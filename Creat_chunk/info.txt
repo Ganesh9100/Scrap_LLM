@@ -1,0 +1,71 @@
+Explanation
+LLM Call Function:
+The function call_llama(prompt) simulates sending a prompt to the Ollama llama3.2 model. Adjust the URL and payload as needed.
+
+Extracting the Text:
+The variable text represents the entire content from the website. In this example, it includes four sections (Introduction, Eligibility, User Obligations, Limitations of Liability).
+
+Chunking Step:
+A prompt instructs the LLM to break the text into sections with static keys. The expected output is a JSON object where keys are static names (e.g., "chunk_introduction"). The LLM’s response is parsed and printed.
+
+Q&A Generation Step:
+For each chunk, another prompt asks the LLM to generate 2-3 question and answer pairs. These pairs are collected into a qa_pairs dictionary and printed.
+
+This code gives you a template to start integrating an LLM for processing and enriching data from the website. You can modify the prompts, endpoints, and error handling as needed for your actual implementation and deployment environment.
+
+
+Below is an example in Python that demonstrates how you could use an LLM (in this case, assumed to be the Ollama llama3.2 model) to process extracted website text. In this example, we assume that you already have a variable named text holding the entire extracted text from the Straight Talk Terms and Conditions page. The code shows two key steps:
+
+Chunking: The LLM is prompted to split the text into logically separated, static-key chunks (for example, “chunk_introduction”, “chunk_eligibility”, etc.).
+
+Q&A Generation: For each chunk, the LLM is again prompted to generate question and answer pairs to help clarify the content.
+
+
+example chunk
+{
+  "chunk_id": "terms_intro",
+  "header": "Introduction & Acceptance",
+  "content": "Welcome to Straight Talk. By accessing our website, you agree to the terms and conditions herein.",
+  "metadata": {
+    "section": "introduction",
+    "importance": "high"
+  }
+}
+
+xample QA Pairs:
+For Chunk: Eligibility
+Q: What is the minimum age required to use Straight Talk?
+
+A: Users must be at least 18 years old to use the services provided by Straight Talk.
+
+Q: Who is not allowed to create an account?
+
+A: Anyone below the age of 18 should not create an account.
+
+These QA pairs can be stored along with or attached to the chunks as part of your document's metadata. They’re later used to match user queries via a similarity search in the vector space.
+
+
+Retrieval Process Workflow:
+User Query:
+Suppose a user asks:
+
+“Am I allowed to use Straight Talk if I’m 16?”
+
+Query Analysis:
+The system first uses natural language query classification (NLQ) to identify that this is a question about age eligibility.
+
+Vector Search:
+The system then searches the vector database for relevant chunks or QA pairs. Given the eligibility chunk, it would return:
+
+Chunk ID: terms_eligibility
+
+QA pair: “What is the minimum age required to use Straight Talk?”
+
+RAG Response:
+The model now uses that pre-processed chunk to generate a refined answer:
+
+“According to Straight Talk’s terms and conditions, users must be at least 18 years old. Since you mentioned being 16, you do not meet the minimum age requirement.”
+
+Optional Reflection:
+If the model is uncertain, a self-reflection module might prompt a re-retrieval or even a light re-scraping, but ideally this pre-processed document already serves the need.
+
