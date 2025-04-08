@@ -1,0 +1,5 @@
+Task - Scraping website info dynamically and transforming it for better RAG performance.
+Compare jina.ai and crawl4ai as well.
+The scrapped content is too long and cannot be passed into the model directly so it requires some kind of pre-processing and chunking.
+You can for tomorrow focus only on the pre-processing that is needed - because the top few and the bottom few data will be headers and footers details. How to dynamically or automatically convert scraped data and have it ready for model consumption.
+After that show chunking and chunk overlap for increased context in RAG.
