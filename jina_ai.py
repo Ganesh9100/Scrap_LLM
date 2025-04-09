@@ -29,50 +29,34 @@ response.text
 
 
 
+import re
 
-def preprocess_jina_output(response):
+def preprocess_jina_output(input_text):
     """
-    Extracts and formats the output from a Jina Reader API response.
+    Preprocesses the Jina Reader output from a plain string format into a structured dictionary.
 
     Args:
-        response (requests.Response): The response object from the Jina Reader API.
+        input_text (str): The raw string output from the Jina Reader.
 
     Returns:
-        dict: A dictionary with keys 'title', 'urlsource', and 'content'.
+        dict: A dictionary with 'title', 'urlsource', and 'content'.
     """
-    if response.status_code != 200:
-        raise ValueError(f"Failed to retrieve content. Status code: {response.status_code}")
+    # Extract the title
+    title_match = re.search(r"Title:\s*(.*)", input_text)
+    title = title_match.group(1).strip() if title_match else "Untitled"
 
-    try:
-        data = response.json()
-    except ValueError:
-        raise ValueError("Response content is not valid JSON")
+    # Extract the URL Source
+    url_match = re.search(r"URL Source:\s*(.*)", input_text)
+    url = url_match.group(1).strip() if url_match else "URL not found"
 
-    # Extract title and markdown content
-    extracted_text = data.get("text", "")  # or "content" depending on API structure
-    url_source = data.get("url", "") or response.url
-
-    # Example extraction (assuming the first line is the title)
-    lines = extracted_text.strip().split("\n")
-    title_line = next((line for line in lines if line.strip().lower().startswith("title:")), None)
-    title = title_line.split(":", 1)[1].strip() if title_line else "Untitled"
-
-    # Extract markdown content (all text after title or all lines if no title prefix)
-    markdown_lines = lines[1:] if title_line else lines
-    markdown_content = "\n".join(markdown_lines).strip()
+    # Extract the Markdown Content
+    markdown_match = re.search(r"Markdown Content:\s*(.*)", input_text, re.DOTALL)
+    markdown_content = markdown_match.group(1).strip() if markdown_match else "No markdown content"
 
     return {
         "title": title,
-        "urlsource": url_source,
+        "urlsource": url,
         "content": markdown_content
     }
-
-
-headers = {"Authorization": f"Bearer {api_key}"}
-response = requests.get(f"{api_url}/{url_to_scrape}", headers=headers)
-
-try:
-    parsed = preprocess_jina_output(response)
-    print(parsed)
-except Exception as e:
-    print("Error processing Jina response:", e)
+result = preprocess_jina_output(raw_input)
+print(result)
