@@ -60,16 +60,24 @@ def rag_pipeline(query):
 rag_pipeline("What is tablet unlimited plan?")
 
 
+ef get_relevant_chunks(file_path, query, k=3):
+    with open(file_path, 'r') as f:
+        full_text = f.read()
 
-# 5. Function to embed using sentence-transformer in Langchain-compatible format
-class SentenceTransformerEmbeddings:
-    def __init__(self, model):
-        self.model = model
+    # Chunk using langchain splitter
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    chunks = splitter.split_text(full_text)
 
-    def embed_documents(self, texts):
-        return self.model.encode(texts).tolist()
+    # Embed chunks using sentence-transformers
+    chunk_embeddings = model.encode(chunks)
 
-    def embed_query(self, text):
-        return self.model.encode([text])[0].tolist()
+    # Build FAISS index manually
+    dim = chunk_embeddings[0].shape[0]
+    index = faiss.IndexFlatL2(dim)
+    index.add(np.array(chunk_embeddings))
 
-embedding_wrapper = SentenceTransformerEmbeddings(embedding_model)
+    # Query embedding
+    query_emb = model.encode([query])
+    _, I = index.search(query_emb, k)
+
+    return [chunks[i] for i in I[0]]
