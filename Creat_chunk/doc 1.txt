@@ -1,0 +1,144 @@
+def extract_urls(sitemap_url):
+    response = requests.get(sitemap_url)
+    response.raise_for_status()  # Raise error if URL is invalid or fails
+
+    # Parse XML content from string
+    root = ET.fromstring(response.content)
+    
+    # Use namespace declared in sitemap
+    namespace = {'ns': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
+    
+    urls = []
+    for loc in root.findall('.//ns:loc', namespace):
+        urls.append(loc.text.strip())
+
+    return urls
+
+
+#  Task 1
+urls = extract_urls('https://www.straighttalk.com/content/straighttalk/us/en.sitemap.xml')  # path to your local sitemap file
+urls = urls[1:]
+
+
+
+def preprocess_text(raw_text):
+    # Unescape HTML entities
+    text = html.unescape(raw_text)
+
+    # Split into lines and clean each
+    lines = text.splitlines()
+    
+    # Define common noise keywords/patterns to remove
+    junk_patterns = [
+        r'skip to main content',
+        r'navbar menu',
+        r'user icon',
+        r'shopping cart icon',
+        r'esp[aá]ñol',
+        r'location service',
+        r'rewards',
+        r'\bmenu\b',
+        r'\bicon\b',
+        r'\bfooter\b',
+        r'\bheader\b',
+        r'back to top',
+    ]
+
+    cleaned_lines = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue  # skip blank
+        if any(re.search(pattern, line, re.IGNORECASE) for pattern in junk_patterns):
+            continue  # skip noisy junk
+        cleaned_lines.append(line)
+
+    return '\n'.join(cleaned_lines)
+
+
+def save_to_txt(text_data, filename):
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(text_data)
+        
+# Task 2 (example scraped content simulation)
+all_clean_text = ''
+
+raw_text = f"Scraped content from\n\nThis is sample\n\ncontent  \n with  spaces.\n\n\n"  # Replace with your scraped content
+cleaned = preprocess_text(raw_text)
+
+# Save
+# save_to_txt(all_clean_text)
+# cleaned
+
+
+
+      import re
+
+def preprocess_jina_output(input_text):
+    """
+    Preprocesses the Jina Reader output from a plain string format into a structured dictionary.
+
+    Args:
+        input_text (str): The raw string output from the Jina Reader.
+
+    Returns:
+        dict: A dictionary with 'title', 'urlsource', and 'content'.
+    """
+    # Extract the title
+    title_match = re.search(r"Title:\s*(.*)", input_text)
+    title = title_match.group(1).strip() if title_match else "Untitled"
+
+    # Extract the URL Source
+    url_match = re.search(r"URL Source:\s*(.*)", input_text)
+    url = url_match.group(1).strip() if url_match else "URL not found"
+
+    # Extract the Markdown Content
+    markdown_match = re.search(r"Markdown Content:\s*(.*)", input_text, re.DOTALL)
+    markdown_content = markdown_match.group(1).strip() if markdown_match else "No markdown content"
+
+    return {
+        "title": title,
+        "urlsource": url,
+        "content": markdown_content
+    }
+
+
+
+
+
+import requests
+
+api_key = "jina_f0c4924a6af348b9acadcdde14358dd41y87PYbPuv9hgY-VyJquRzppQ0Jx"
+
+# Define the Jina Reader API endpoint
+api_url = "https://r.jina.ai"
+
+api_key = api_key
+# url_to_scrape = "https://www.straighttalk.com/support/terms-conditions"
+# url_to_scrape = "https://www.straighttalk.com/privacy-policy"
+
+# url_subset
+
+
+not_working = []
+data_extracted = []
+for i_url in url_subset:
+    try:
+        # Make a request to Jina Reader API
+        headers = {"Authorization": f"Bearer {api_key}"}
+        response = requests.get(f"{api_url}/{i_url}", headers=headers)
+
+        if response.status_code == 200:
+            content = response.text
+            result = preprocess_jina_output(content)
+            
+        else:
+            print("Failed to scrape the content")
+        
+    except:
+        print(f"not able to process {url_subset[i_url]}")
+        not_working.append(url_subset[i_url])
+        continue
+    print(f"Processed {i_url}")
+    data_extracted.append(result)
+
