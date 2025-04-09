@@ -1,1 +1,250 @@
 
+
+
+
+Rag - URL Navigation and Dynamic Chunking Retrival 
+
+
+
+Web Scrapping Tool
+
+Xml site map loader
+Jina AI
+URL_to_File_mapping
+
+base_path = '/mnt/Agents AI Model/Rag/Updated_code/Chat_with_PDF/CrawlAIWith_langchain/Using_JinaAI/corpus_extracted_jina/'
+
+url_to_file = {'https://www.straighttalk.com/nascar/contact':[f'{base_path}Contact Us - Customer & Media Contact Information - Straight Talk_.txt','contact us cusomer media support how to contact'],
+                'https://www.straighttalk.com/privacy-policy':[f'{base_path}Privacy Policy_.txt','policy personal information privacy information  secure retain personal information childern blogs refer a friend right to know delete access information ccpa request reporting  other california privacy rights  submit privacy request  nevada privacy rights oreggon region changes to policy  recent changes contact privacy'],
+    
+               'https://www.straighttalk.com/support/terms-conditions':[f'{base_path}Arbitration, Consent & Policies - Straight Talk Terms & Conditions_.txt',keywords_terms_conditions],
+               'https://www.straighttalk.com/more-options/trade-in-program':[f'{base_path}Get Paid When You Trade In Phone | Straight Talk Wireless_.txt',keywords_tradein]
+    
+}
+
+Url_to_file
+from langchain.embeddings import OpenAIEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.document_loaders import TextLoader
+from sentence_transformers import SentenceTransformer
+import numpy as np
+import os
+
+
+keywords_terms_conditions = """Agreement to Arbitrate Disputes
+Express Written Consent to Receive Communications
+ITerms and Conditions of Service
+International Long Distance ServiceHome Phone
+Home Internet
+VMobile Hotspots and Bring Your Own Tablet
+Return Policy return eligible for return walmart purchase online straighttalk purchase limited warranty terms of limited warranty 
+Limited WarrantyUnlocking Policy
+"""
+
+keywords_tradein = """
+tradein opt for trade in upgrade and get paid trade in old device old device exchange trade in program
+"""
+
+
+# Step 1: Create initial URL retrieval index
+url_texts = []
+urls = []
+url_keys = []
+for url, file_path in url_to_file.items():
+#     print(url)
+    print(file_path)
+#     print()
+#     print()
+    with open(file_path[0], 'r') as f:
+        content = f.read()  # First 500 characters as summary
+    keywords_url = file_path[1]
+    url_texts.append(content)
+    url_keys.append(keywords_url)
+    urls.append(url)
+
+# Embed summaries
+model = SentenceTransformer('all-MiniLM-L6-v2')
+url_embeddings = model.encode(url_texts)
+url_embeddings_keywords = model.encode(url_keys)
+len(url_keys)
+
+import faiss
+def get_relevant_chunks(file_path, query, k=3):
+    with open(file_path, 'r') as f:
+        full_text = f.read()
+
+    # Chunk using langchain splitter
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    chunks = splitter.split_text(full_text)
+
+    # Embed chunks using sentence-transformers
+    chunk_embeddings = model.encode(chunks)
+
+    # Build FAISS index manually
+    dim = chunk_embeddings[0].shape[0]
+    index = faiss.IndexFlatL2(dim)
+    index.add(np.array(chunk_embeddings))
+
+    # Query embedding
+    query_emb = model.encode([query])
+    _, I = index.search(query_emb, k)
+
+    return [chunks[i] for i in I[0]]
+
+
+
+def find_best_url(query):
+    query_emb = model.encode([query])[0]
+    scores = np.dot(url_embeddings_keywords, query_emb)
+#     print("The best URL finding Score is",scores)
+#     print()
+    c = -1
+    list_score = list(scores)
+    print(list_score)
+    
+    for k in url_to_file.keys():
+        c = c+1
+        print("URL : ",k,"Score : ",list_score[c])
+        print()
+    
+    best_idx = int(np.argmax(scores))
+    return urls[best_idx]
+
+# Step 2: Load & chunk
+def get_relevant_chunks_old(file_path, query):
+    with open(file_path, 'r') as f:
+        full_text = f.read()
+
+    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    docs = splitter.create_documents([full_text])
+
+    # Embed and create in-memory FAISS
+    faiss_index = FAISS.from_documents(docs, embedding_wrapper)
+    relevant_docs = faiss_index.similarity_search(query, k=3)
+
+    return "\n".join([doc.page_content for doc in relevant_docs])
+
+
+
+
+def call_llm(model_llm,user_query):
+    
+    
+
+    system_prompt = """ "You are a helpful AI bot with extensive domain knowledge of Straight Talk website details, 
+    an internet and telecommunications company. Respond the the user queries and perform the requests as asked."""
+
+
+    prompt = ChatPromptTemplate([
+        ("system",system_prompt),
+        ("human", "{user_question}")
+    ])
+
+    chain = prompt | model_llm
+
+    start_time = time.time()
+
+    response = chain.invoke({"user_question": user_query})
+
+    end_time = time.time()
+
+    execution_time = end_time - start_time
+
+    print(f"Execution time: {execution_time} seconds \n")
+    print()
+    print()
+    
+    print("Model Response below")
+    print()
+
+    print(response)
+
+
+
+ACTUAL FLOW
+# Main pipeline
+model_llm = Ollama(model="llama3.2:3b")
+
+def rag_pipeline(query):
+    best_url = find_best_url(query)
+    file_path = url_to_file[best_url]
+    context = get_relevant_chunks(file_path[0], query)
+    print("User Query:",query)
+    print()
+    print("File Matched with User Query",file_path)
+    print()
+    print("Processing....")
+    print()
+    print()
+    print("Taking Relavent Chunks")
+    print()
+    print()
+    print("Chunk Taken: ")
+    print()
+    print(context)
+    print()
+    print()
+    print()
+    
+    final_prompt = f"Context:\n{context}\n\nQuestion:\n{query}\n\nAnswer:"
+    # Send to LLM of your choice here
+    
+    print("Calling LLM Model...")
+    call_llm(model_llm,final_prompt)
+
+
+
+Sample input
+# Example
+rag_pipeline("How to contact customer support.?")
+
+Sample output
+[0.1061656, 0.15981343, 0.37986898, 0.42031878]
+URL :  https://www.straighttalk.com/nascar/contact Score :  0.1061656
+
+URL :  https://www.straighttalk.com/privacy-policy Score :  0.15981343
+
+URL :  https://www.straighttalk.com/support/terms-conditions Score :  0.37986898
+
+URL :  https://www.straighttalk.com/more-options/trade-in-program Score :  0.42031878
+
+User Query: How does the trade in program work in straight talk?
+
+File Matched with User Query ['/mnt/Agents AI Model/Rag/Updated_code/Chat_with_PDF/CrawlAIWith_langchain/Using_JinaAI/corpus_extracted_jina/Get Paid When You Trade In Phone | Straight Talk Wireless_.txt', '\ntradein opt for trade in upgrade and get paid trade in old device old device exchange trade in program\n']
+
+Processing....
+
+
+Taking Relavent Chunks
+
+
+Chunk Taken: 
+
+["‹›\nGET STARTED\n**TRADE IN**\n---------------\nYou have questions. We have answers.\n[What is the Trade-In Program?](https://www.straighttalk.com/more-options/trade-in-program#)\nAt Straight Talk, you can trade in your old device and get up to $300 with the Trade-In Program. Visit our site and receive value for your device. Plus, by participating, you'll be doing something good for the environment.\n\\*Every phone that isn't refurbished will be recycled.", "\\*Every phone that isn't refurbished will be recycled.\n[How does the Straight Talk® Trade-In Program work?](https://www.straighttalk.com/more-options/trade-in-program#)", 'Visit our Trade-In-Program Website to trade in your device from the comfort of your home. In approximately 7 days, you will receive a box with shipping instructions and a pre-paid return label you can use to ship the trade-in device in order to receive value. Please clear any personal information and PIN locks from your device and package it per the shipping instructions that will be provided as part of your order confirmation.\n[Explore FAQS](https://support.straighttalk.com/)']
+
+
+
+Calling LLM Model...
+Execution time: 50.89865159988403 seconds 
+
+
+
+Model Response below
+
+The Straight Talk Trade-In Program is a simple process that allows you to trade in your old device for cash or credit towards a new one. Here's how it works:
+
+1. **Start by visiting our website**: Go to the Straight Talk website and explore the Trade-In Program option.
+2. **Get an estimated value for your device**: Use our tool to estimate the value of your device based on its condition, age, and model.
+3. **Create a trade-in request**: Fill out the trade-in form with your personal information and shipping details.
+4. **Receive a pre-paid return label**: Within approximately 7 days, you'll receive a box with shipping instructions and a pre-paid return label to ship your device back to Straight Talk.
+5. **Prepare your device for shipping**: Make sure to clear any personal information and PIN locks from your device, and package it per the shipping instructions provided.
+6. **Ship your device**: Use the pre-paid return label to ship your device back to Straight Talk.
+7. **Receive value for your trade-in**: Once we receive your device, you'll receive an email with details about your trade-in value.
+
+That's it! The entire process is designed to be easy and
+
+
+
+User Query will be done a similarity check with the 
+
