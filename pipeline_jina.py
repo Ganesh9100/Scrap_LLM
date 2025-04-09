@@ -58,3 +58,18 @@ def rag_pipeline(query):
 
 # Example
 rag_pipeline("What is tablet unlimited plan?")
+
+
+
+# 5. Function to embed using sentence-transformer in Langchain-compatible format
+class SentenceTransformerEmbeddings:
+    def __init__(self, model):
+        self.model = model
+
+    def embed_documents(self, texts):
+        return self.model.encode(texts).tolist()
+
+    def embed_query(self, text):
+        return self.model.encode([text])[0].tolist()
+
+embedding_wrapper = SentenceTransformerEmbeddings(embedding_model)
